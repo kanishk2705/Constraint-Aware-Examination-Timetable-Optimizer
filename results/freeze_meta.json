@@ -1,0 +1,14 @@
+{
+ "protocol_freeze_branch": "protocol-freeze",
+ "protocol_freeze_commit": "b45a934ec3d6393fbc2bf092524f87153b773146",
+ "params_freeze_branch": "params-freeze",
+ "params_freeze_commit": "2c45e032fda905b1d9f7f6d5ae0cc7c74e50ace6",
+ "tuned_sa_params": {
+  "t0": 2.0,
+  "t1": 0.01,
+  "p_swap": 0.5
+ },
+ "decision_rule_theta_edges": 505,
+ "eval_manifest_sha256": "705a62d86c8b337f8922df9f53ca4f33924ff810b3b631fc08599fb2a570e12c",
+ "budget_seconds": 20
+}
