@@ -1,0 +1,105 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Examination Timetable Optimizer</title><style>
+:root{color-scheme:light;--bg:#fcfcfb;--card:#fff;--ink:#0b0b0b;--muted:#52514e;--rule:#e4e3df;--accent:#2a78d6;--good:#0b7a3b;--bad:#b3261e}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;--bg:#1a1a19;--card:#232321;--ink:#f0efec;--muted:#c3c2b7;--rule:#3a3a37;--accent:#3987e5;--good:#5fd08a;--bad:#ff8a80}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:980px;margin:0 auto;padding:32px 16px 80px}h1{font-size:2rem;line-height:1.2;margin:.2em 0}h2{margin-top:2.4em;border-top:1px solid var(--rule);padding-top:.8em}
+h3{margin-top:1.6em}.lede{color:var(--muted);font-size:1.1rem}.flow{display:flex;flex-wrap:wrap;gap:8px;margin:1em 0}.flow a{border:1px solid var(--rule);border-radius:999px;padding:4px 12px;text-decoration:none;color:var(--ink);background:var(--card);font-size:.9rem}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;margin:14px 0}table{border-collapse:collapse;width:100%;font-size:.9rem;display:block;overflow-x:auto}th,td{border-bottom:1px solid var(--rule);padding:6px 10px;text-align:left;vertical-align:top}th{color:var(--muted);font-weight:600}
+code{background:var(--card);border:1px solid var(--rule);border-radius:4px;padding:0 4px}img{max-width:100%;height:auto;background:#fff;border-radius:8px;border:1px solid var(--rule)}.ok{color:var(--good);font-weight:600}.no{color:var(--bad);font-weight:600}
+figcaption{color:var(--muted);font-size:.88rem;margin-top:4px}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}.kpi b{display:block;font-size:1.5rem}
+</style></head><body><main>
+<h1>Constraint-Aware Examination Timetable Optimizer</h1>
+<p class="lede">When does exact solving pay off? A pre-registered comparison of greedy constructions, a tuned local search and OR-Tools CP-SAT on
+108 held-out examination-timetabling instances, mapped against instance size, conflict density and capacity tightness.</p>
+<div class="flow"><a href="#problem">1 Problem</a><a href="#design">2 Design</a><a href="#implementation">3 Implementation</a><a href="#results">4 Results</a><a href="#limits">5 Limitations</a><a href="#next">6 Next steps</a><a href="#repro">Reproduce</a></div>
+
+<div class="card kpis">
+<div class="kpi"><b>108</b>held-out instances (27 cells x 4)</div>
+<div class="kpi"><b>1072</b>timetables re-checked by the independent validator</div>
+<div class="kpi"><b>0</b>hard-constraint violations found</div>
+<div class="kpi"><b>3</b>claimed-vs-validated objective mismatches</div>
+</div>
+
+<h2 id="problem">1. Problem</h2>
+<p>A university must place every exam in one time slot so that no student sits two exams at once and no slot holds more students than the rooms allow.
+That already makes a graph-colouring problem with capacities: exams are vertices, an edge joins two exams that share a student. On top of it come soft goals:
+avoid back-to-back exams, avoid more than two exams for one student on one day, spread exams out, and use few slots.</p>
+<ul>
+<li><b>Hard:</b> one slot per exam; no student clash; seats per slot &lt;= capacity.</li>
+<li><b>Soft (summed over students):</b> 5 per back-to-back pair, 2 and 1 per pair one or two periods apart inside a day, 8 per exam beyond two on one day.</li>
+<li><b>Research question:</b> for which instance sizes, densities and capacity tightness does an exact solver beat cheap heuristics, and when does it not?</li>
+</ul>
+
+<h2 id="design">2. Design</h2>
+<p><b>Instances.</b> Real benchmarks were not usable (the sandbox blocked their hosts and no licence is stated), so a documented generator (<code>DATA.md</code>) builds instances with controlled
+size (14 / 32 / 64 exams), conflict density (0.10 / 0.25 / 0.45) and capacity tightness (0.70 / 0.85 / 0.97). Each instance has a hidden planted timetable so it is feasible by construction; solvers never see it.
+Tuning instances (54) and held-out instances (108) come from disjoint seeds, and every tuning choice was frozen before the held-out run.</p>
+<p><b>Methods.</b> Three greedy constructions (random order, largest degree first, DSATUR-style most-constrained first); a simulated-annealing local search that never breaks a hard constraint;
+CP-SAT cold; and a hybrid (local search for 25% of the budget, then CP-SAT warm-started). All get the same 20 s wall clock and the same two CPU cores (SA best of two processes, CP-SAT two workers).</p>
+<p><b>Original angle.</b> Instead of asking only "is CP-SAT better?", the study pre-registers six hypotheses about <i>where</i> exact solving pays off, and fits a one-feature decision rule
+(use CP-SAT when the conflict graph has at most 505 edges) on the tuning set only, then tests it on the held-out set.</p>
+
+<h2 id="implementation">3. Implementation</h2>
+<ul>
+<li><code>generator.py</code> controlled instances with a planted solution; <code>validator.py</code> an <b>independent</b> checker that shares no code with the solvers and recomputes the objective student by student.</li>
+<li><code>state.py</code> exact incremental cost deltas shared by greedy and local search; <code>greedy.py</code>, <code>localsearch.py</code>; <code>cpsat.py</code> the CP-SAT models (soft objective and slot minimisation).</li>
+<li>1072 stored timetables were re-validated; 0 hard violations. The validator's cost is used everywhere. In 3 cold CP-SAT runs (tier L, time limit reached) the solver's own claimed objective was higher than the validated cost (largest gap 335); this is Deviation 3 in <code>PROTOCOL.md</code>, found by the audit before results were computed.</li>
+<li>Unit tests, including tests that prove the validator <i>can</i> fail (clash, capacity, out-of-range, missing slot) and that two different CP-SAT encodings reach the same optimum.</li>
+</ul>
+
+<h2 id="results">4. Results (held-out instances only)</h2>
+<h3>Pre-registered hypotheses</h3>
+<p>Primary metric: <i>excess</i> over the best cost any method found on the same instance, in percent of a fixed per-instance scale (lower is better). Intervals are 95% bootstrap over instances.</p>
+<div class="card"><table><thead><tr><th>Hypothesis</th><th>Claim</th><th>Evidence</th><th>Verdict</th></tr></thead><tbody><tr><td>H1 proof frontier</td><td>Proof rate: Wilson CI above 0.5 for tier S and below 0.25 for tier L (measured: tier M and L proof rates are both below 50%, but tier L's interval reaches above 0.25)</td><td>S: 97% (35/36; 95% CI 86%-100%) | M: 25% (9/36; 95% CI 14%-41%) | L: 33% (12/36; 95% CI 20%-50%)</td><td><span class="no">not supported</span></td></tr><tr><td>H2a crossover (tier M)</td><td>CP-SAT beats tuned local search in M (D = excess(LS) - excess(CP-SAT) > 0)</td><td>0.48 [0.05, 0.96]</td><td><span class="ok">supported</span></td></tr><tr><td>H2b crossover (tier L)</td><td>Local search beats CP-SAT in L (D < 0)</td><td>-0.45 [-0.71, -0.22]</td><td><span class="ok">supported</span></td></tr><tr><td>H3 tightness vs greedy</td><td>Random-order greedy loses feasibility under tight capacity; LS and CP-SAT stay >= 90% feasible at tight capacity (LS met this; cold CP-SAT did not: it returned no timetable in 5 of 24 tight instances, all tier L, within 20 s)</td><td>loose 100% (24/24; 95% CI 86%-100%); tight 0% (0/24; 95% CI 0%-14%); LS tight 100%, CP-SAT tight 79%</td><td><span class="no">not supported</span></td></tr><tr><td>H4 warm start</td><td>Hybrid beats cold CP-SAT (M+L): mean excess difference < 0</td><td>-0.29 [-0.42, -0.18]</td><td><span class="ok">supported</span></td></tr><tr><td>H5 one-feature rule</td><td>CP-SAT if edges <= 505 else LS beats both fixed policies</td><td>rule - LS: -1.10 [-1.75, -0.56]; rule - CP-SAT: -0.13 [-0.21, -0.05]</td><td><span class="ok">supported</span></td></tr><tr><td>H6 slot minimisation</td><td>DSATUR first-fit already matches CP-SAT's slot count on >= 90% of instances</td><td>73% (79/108; 95% CI 64%-81%)</td><td><span class="no">not supported</span></td></tr></tbody></table></div>
+
+<h3>Where exact solving can prove optimality</h3>
+<figure><img src="figures/proven.svg" alt="Share of instances CP-SAT proved optimal, by size, density and tightness"><figcaption>CP-SAT proof rate within 20 s, with 95% Wilson intervals.</figcaption></figure>
+
+<h3>Solution quality by size</h3>
+<figure><img src="figures/excess.svg" alt="Mean excess by size tier for four methods"><figcaption>Mean excess over the best-known cost, with 95% bootstrap intervals; numbers on bars.</figcaption></figure>
+<div class="card"><table><thead><tr><th>Size</th><th>Method</th><th>Feasible</th><th>Mean excess [95% CI]</th></tr></thead><tbody><tr><td>S: 14 exams</td><td>Greedy (DSATUR)</td><td>92%</td><td>5.17 [3.50, 6.95]</td></tr><tr><td>S: 14 exams</td><td>Local search (SA)</td><td>100%</td><td>2.82 [1.38, 4.52]</td></tr><tr><td>S: 14 exams</td><td>CP-SAT</td><td>100%</td><td>0.00 [0.00, 0.00]</td></tr><tr><td>S: 14 exams</td><td>Hybrid (LS then CP-SAT)</td><td>100%</td><td>0.00 [0.00, 0.00]</td></tr><tr><td>M: 32 exams</td><td>Greedy (DSATUR)</td><td>86%</td><td>1.61 [1.07, 2.20]</td></tr><tr><td>M: 32 exams</td><td>Local search (SA)</td><td>100%</td><td>0.76 [0.35, 1.23]</td></tr><tr><td>M: 32 exams</td><td>CP-SAT</td><td>100%</td><td>0.28 [0.15, 0.43]</td></tr><tr><td>M: 32 exams</td><td>Hybrid (LS then CP-SAT)</td><td>100%</td><td>0.07 [0.02, 0.14]</td></tr><tr><td>L: 64 exams</td><td>Greedy (DSATUR)</td><td>83%</td><td>0.43 [0.28, 0.58]</td></tr><tr><td>L: 64 exams</td><td>Local search (SA)</td><td>100%</td><td>0.03 [0.01, 0.06]</td></tr><tr><td>L: 64 exams</td><td>CP-SAT</td><td>86%</td><td>0.47 [0.24, 0.72]</td></tr><tr><td>L: 64 exams</td><td>Hybrid (LS then CP-SAT)</td><td>97%</td><td>0.08 [0.04, 0.13]</td></tr></tbody></table></div>
+
+<h3>Capacity tightness and feasibility</h3>
+<figure><img src="figures/feasible.svg" alt="Feasibility rate by capacity tightness"><figcaption>Share of instances where the method returned a timetable that satisfies every hard constraint.</figcaption></figure>
+
+<h3>Regime map: local search minus CP-SAT</h3>
+<figure><img src="figures/map.svg" alt="Heat map of the difference in mean excess between local search and CP-SAT per cell"><figcaption>Mean excess(LS) - mean excess(CP-SAT) per cell (4 instances each, descriptive only). Positive (blue): CP-SAT better. Negative (orange): local search better.</figcaption></figure>
+
+<h3>All methods, all instances</h3>
+<div class="card"><table><thead><tr><th>Method</th><th>Feasible</th><th>Mean excess [95% CI]</th><th>Mean pre-registered % regret [95% CI]</th></tr></thead><tbody><tr><td>Greedy (random order)</td><td>42% (45/108; 95% CI 33%-51%)</td><td>4.97 [2.73, 7.82]</td><td>1314.0 [583.0, 2350.9]</td></tr><tr><td>Greedy (largest degree)</td><td>69% (75/108; 95% CI 60%-77%)</td><td>1.78 [1.24, 2.43]</td><td>122.5 [71.2, 191.1]</td></tr><tr><td>Greedy (DSATUR)</td><td>87% (94/108; 95% CI 79%-92%)</td><td>2.48 [1.77, 3.29]</td><td>792.8 [130.5, 1745.2]</td></tr><tr><td>Local search (SA)</td><td>100% (108/108; 95% CI 97%-100%)</td><td>1.20 [0.67, 1.82]</td><td>40.8 [20.2, 67.7]</td></tr><tr><td>CP-SAT</td><td>95% (103/108; 95% CI 90%-98%)</td><td>0.24 [0.15, 0.34]</td><td>19.7 [11.6, 28.9]</td></tr><tr><td>Hybrid (LS then CP-SAT)</td><td>99% (107/108; 95% CI 95%-100%)</td><td>0.05 [0.03, 0.08]</td><td>6.7 [2.7, 13.1]</td></tr></tbody></table></div>
+
+<h3>Per-cell table (table view of the map)</h3>
+<div class="card"><table><thead><tr><th>Size</th><th>Density</th><th>Tightness</th><th>n</th><th>CP-SAT proven</th><th>DSATUR</th><th>LS</th><th>CP-SAT</th><th>Hybrid</th></tr></thead><tbody><tr><td>S</td><td>low</td><td>loose</td><td>4</td><td>4</td><td>2.2</td><td>0.0</td><td>0.0</td><td>0.0</td></tr><tr><td>S</td><td>low</td><td>medium</td><td>4</td><td>4</td><td>2.6</td><td>0.0</td><td>0.0</td><td>0.0</td></tr><tr><td>S</td><td>low</td><td>tight</td><td>4</td><td>4</td><td>6.2</td><td>9.6</td><td>0.0</td><td>0.0</td></tr><tr><td>S</td><td>mid</td><td>loose</td><td>4</td><td>4</td><td>2.8</td><td>0.0</td><td>0.0</td><td>0.0</td></tr><tr><td>S</td><td>mid</td><td>medium</td><td>4</td><td>4</td><td>8.3</td><td>1.6</td><td>0.0</td><td>0.0</td></tr><tr><td>S</td><td>mid</td><td>tight</td><td>4</td><td>4</td><td>6.4</td><td>5.0</td><td>0.0</td><td>0.0</td></tr><tr><td>S</td><td>high</td><td>loose</td><td>4</td><td>3</td><td>2.7</td><td>0.0</td><td>0.0</td><td>0.0</td></tr><tr><td>S</td><td>high</td><td>medium</td><td>4</td><td>4</td><td>5.6</td><td>0.2</td><td>0.0</td><td>0.0</td></tr><tr><td>S</td><td>high</td><td>tight</td><td>4</td><td>4</td><td>10.6</td><td>8.9</td><td>0.0</td><td>0.0</td></tr><tr><td>M</td><td>low</td><td>loose</td><td>4</td><td>4</td><td>0.0</td><td>0.0</td><td>0.0</td><td>0.0</td></tr><tr><td>M</td><td>low</td><td>medium</td><td>4</td><td>3</td><td>0.4</td><td>0.0</td><td>0.0</td><td>0.0</td></tr><tr><td>M</td><td>low</td><td>tight</td><td>4</td><td>2</td><td>2.5</td><td>1.4</td><td>0.0</td><td>0.0</td></tr><tr><td>M</td><td>mid</td><td>loose</td><td>4</td><td>0</td><td>0.9</td><td>0.0</td><td>0.0</td><td>0.0</td></tr><tr><td>M</td><td>mid</td><td>medium</td><td>4</td><td>0</td><td>1.0</td><td>0.1</td><td>0.1</td><td>0.0</td></tr><tr><td>M</td><td>mid</td><td>tight</td><td>4</td><td>0</td><td>3.6</td><td>2.4</td><td>0.2</td><td>0.0</td></tr><tr><td>M</td><td>high</td><td>loose</td><td>4</td><td>0</td><td>1.8</td><td>0.0</td><td>0.6</td><td>0.0</td></tr><tr><td>M</td><td>high</td><td>medium</td><td>4</td><td>0</td><td>2.7</td><td>0.0</td><td>1.1</td><td>0.4</td></tr><tr><td>M</td><td>high</td><td>tight</td><td>4</td><td>0</td><td>5.7</td><td>2.8</td><td>0.5</td><td>0.3</td></tr><tr><td>L</td><td>low</td><td>loose</td><td>4</td><td>4</td><td>0.0</td><td>0.0</td><td>0.0</td><td>0.0</td></tr><tr><td>L</td><td>low</td><td>medium</td><td>4</td><td>4</td><td>0.0</td><td>0.0</td><td>0.0</td><td>0.0</td></tr><tr><td>L</td><td>low</td><td>tight</td><td>4</td><td>4</td><td>0.6</td><td>0.0</td><td>0.0</td><td>0.0</td></tr><tr><td>L</td><td>mid</td><td>loose</td><td>4</td><td>0</td><td>0.3</td><td>0.1</td><td>0.0</td><td>0.0</td></tr><tr><td>L</td><td>mid</td><td>medium</td><td>4</td><td>0</td><td>0.2</td><td>0.1</td><td>0.0</td><td>0.0</td></tr><tr><td>L</td><td>mid</td><td>tight</td><td>4</td><td>0</td><td>0.1</td><td>0.0</td><td>1.4</td><td>0.2</td></tr><tr><td>L</td><td>high</td><td>loose</td><td>4</td><td>0</td><td>0.7</td><td>0.0</td><td>1.1</td><td>0.1</td></tr><tr><td>L</td><td>high</td><td>medium</td><td>4</td><td>0</td><td>1.0</td><td>0.0</td><td>1.5</td><td>0.3</td></tr><tr><td>L</td><td>high</td><td>tight</td><td>4</td><td>0</td><td>1.4</td><td>0.1</td><td>n/a</td><td>0.1</td></tr></tbody></table><p class="lede">Entries are mean excess; 4 instances per cell, so cells are descriptive, never inferential.</p></div>
+
+<h3>Study A: number of slots</h3>
+<div class="card"><table><thead><tr><th>Tier</th><th>n</th><th>DSATUR first-fit matches CP-SAT</th><th>CP-SAT strictly fewer slots</th><th>Multi-start DSATUR matches CP-SAT</th><th>CP-SAT at lower bound</th></tr></thead><tbody><tr><td>S</td><td>36</td><td>89% (32/36; 95% CI 75%-96%)</td><td>4</td><td>97% (35/36; 95% CI 86%-100%)</td><td>56% (20/36; 95% CI 40%-70%)</td></tr><tr><td>M</td><td>36</td><td>72% (26/36; 95% CI 56%-84%)</td><td>10</td><td>83% (30/36; 95% CI 68%-92%)</td><td>86% (31/36; 95% CI 71%-94%)</td></tr><tr><td>L</td><td>36</td><td>58% (21/36; 95% CI 42%-73%)</td><td>15</td><td>75% (27/36; 95% CI 59%-86%)</td><td>72% (26/36; 95% CI 56%-84%)</td></tr><tr><td>all</td><td>108</td><td>73% (79/108; 95% CI 64%-81%)</td><td>29</td><td>85% (92/108; 95% CI 77%-91%)</td><td>71% (77/108; 95% CI 62%-79%)</td></tr></tbody></table></div>
+
+<h3>Sensitivity: the pre-registered percentage regret</h3>
+<p>The original metric divides by the best cost, which is 0 on some large low-density instances (Deviation 1 in <code>PROTOCOL.md</code>). It is reported unchanged here as a sensitivity check.</p>
+<div class="card"><table><thead><tr><th>Quantity</th><th>Mean difference [95% CI], in % regret</th></tr></thead><tbody><tr><td>H2 D (M / L)</td><td>46.3 [7.1, 100.0] / 1.1 [-55.0, 82.5]</td></tr><tr><td>H4 hybrid - cold</td><td>-19.8 [-34.2, -4.3]</td></tr><tr><td>H5 rule - LS / rule - CP</td><td>-32.4 [-59.8, -11.1] / -10.8 [-18.9, -3.8]</td></tr></tbody></table></div>
+
+<h2 id="limits">5. Limitations</h2>
+<ul>
+<li>Constructed instances only: every instance is feasible by construction, the conflict graph always has a colouring within the horizon, and exam sizes carry a faint imprint of the planted grouping. Results may not transfer to real examination data (no real benchmark could be used; see <code>DATA.md</code>).</li>
+<li>Rooms are one pooled seat count per slot, exams last one slot, and the objective weights are my own choice.</li>
+<li>CP-SAT's lower bound is 0 until it proves optimality on this objective, so optimality gaps are uninformative; quality is judged against the best cost found by any method, which is itself an upper bound on the optimum.</li>
+<li>One wall-clock budget (20 s) and two CPU cores; wall-clock limits make CP-SAT and annealing runs not bit-for-bit repeatable, which is why every timetable is stored and re-validated.</li>
+<li>Four instances per cell: per-cell numbers are descriptive; inference pools over the other factors.</li>
+<li>Python local search; a compiled implementation would run many more moves per second and could shift the crossover.</li>
+</ul>
+
+<h2 id="next">6. Next steps</h2>
+<ul>
+<li>Run the same code on the real Toronto and ITC2007 instances once their terms can be checked and the files obtained (a parser is all that is missing).</li>
+<li>Per-room modelling, multi-slot exams and overnight spacing; a compiled local search; a second budget (60 s) to see whether the crossover moves.</li>
+<li>Stronger CP-SAT formulations (cliques over student groups, symmetry breaking across days) to obtain informative lower bounds.</li>
+</ul>
+
+<h2 id="repro">Reproduce</h2>
+<div class="card"><code>pip install -r requirements.txt</code> &middot; <code>pytest</code> &middot; <code>python scripts/generate_instances.py eval</code> &middot;
+<code>python scripts/run_experiment.py --data data/eval --out results/raw/eval.jsonl --budget 20 --ls-params results/tuned_params.json</code> &middot;
+<code>python scripts/analyze.py eval --raw results/raw/eval.jsonl --data data/eval</code> &middot; <code>python scripts/build_docs.py</code>.
+Frozen decisions live on the branches <code>protocol-freeze</code> and <code>params-freeze</code> (git tag pushes fail from the sandbox, so pinned branches are used).</div>
+<div class="card"><table><thead><tr><th>Freeze record</th><th>Value</th></tr></thead><tbody><tr><td>protocol_freeze_branch</td><td>protocol-freeze</td></tr><tr><td>protocol_freeze_commit</td><td>b45a934ec3d6393fbc2bf092524f87153b773146</td></tr><tr><td>params_freeze_branch</td><td>params-freeze</td></tr><tr><td>params_freeze_commit</td><td>2c45e032fda905b1d9f7f6d5ae0cc7c74e50ace6</td></tr><tr><td>tuned_sa_params</td><td>{&#x27;t0&#x27;: 2.0, &#x27;t1&#x27;: 0.01, &#x27;p_swap&#x27;: 0.5}</td></tr><tr><td>decision_rule_theta_edges</td><td>505</td></tr><tr><td>eval_manifest_sha256</td><td>705a62d86c8b337f8922df9f53ca4f33924ff810b3b631fc08599fb2a570e12c</td></tr><tr><td>budget_seconds</td><td>20</td></tr></tbody></table></div>
+</main></body></html>

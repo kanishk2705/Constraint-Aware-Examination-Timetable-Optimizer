@@ -200,13 +200,13 @@ def build(summary_path, out_dir):
 
     # ---------- tables ----------
     t_h = []
-    t_h.append(["H1 proof frontier", "CP-SAT proves optimality on most tier-S and almost no tier-L instances",
+    t_h.append(["H1 proof frontier", "Proof rate: Wilson CI above 0.5 for tier S and below 0.25 for tier L (measured: tier M and L proof rates are both below 50%, but tier L's interval reaches above 0.25)",
                 " | ".join(f"{t}: {ci_rate(H['H1']['proven_rate'][t])}" for t in TIERS), verdict(H["H1"]["supported"])])
     d = H["H2"]["D_ls_minus_cp"]
     t_h.append(["H2a crossover (tier M)", "CP-SAT beats tuned local search in M (D = excess(LS) - excess(CP-SAT) > 0)", ci_mean(d["M"]), verdict(H["H2"]["H2a_supported"])])
     t_h.append(["H2b crossover (tier L)", "Local search beats CP-SAT in L (D < 0)", ci_mean(d["L"]), verdict(H["H2"]["H2b_supported"])])
     h3 = H["H3"]
-    t_h.append(["H3 tightness vs greedy", "Random-order greedy loses feasibility under tight capacity (M+L); LS and CP-SAT stay >= 90% feasible",
+    t_h.append(["H3 tightness vs greedy", "Random-order greedy loses feasibility under tight capacity; LS and CP-SAT stay >= 90% feasible at tight capacity (LS met this; cold CP-SAT did not: it returned no timetable in 5 of 24 tight instances, all tier L, within 20 s)",
                 f"loose {ci_rate(h3['greedy_random_feasible']['loose'])}; tight {ci_rate(h3['greedy_random_feasible']['tight'])}; "
                 f"LS tight {pct(h3['ls_feasible_tight']['rate'])}, CP-SAT tight {pct(h3['cpsat_feasible_tight']['rate'])}", verdict(h3["supported"])])
     t_h.append(["H4 warm start", "Hybrid beats cold CP-SAT (M+L): mean excess difference < 0", ci_mean(H["H4"]["hybrid_minus_cold"]), verdict(H["H4"]["supported"])])
@@ -282,7 +282,7 @@ CP-SAT cold; and a hybrid (local search for 25% of the budget, then CP-SAT warm-
 <ul>
 <li><code>generator.py</code> controlled instances with a planted solution; <code>validator.py</code> an <b>independent</b> checker that shares no code with the solvers and recomputes the objective student by student.</li>
 <li><code>state.py</code> exact incremental cost deltas shared by greedy and local search; <code>greedy.py</code>, <code>localsearch.py</code>; <code>cpsat.py</code> the CP-SAT models (soft objective and slot minimisation).</li>
-<li>{aud['timetables_checked']} stored timetables were re-validated; the claimed objective equalled the validator's in every case ({aud['claimed_cost_mismatches']} mismatches, {aud['hard_violations']} hard violations).</li>
+<li>{aud['timetables_checked']} stored timetables were re-validated; {aud['hard_violations']} hard violations. The validator's cost is used everywhere. In {aud['claimed_cost_mismatches']} cold CP-SAT runs (tier L, time limit reached) the solver's own claimed objective was higher than the validated cost (largest gap {aud['max_overestimate']}); this is Deviation 3 in <code>PROTOCOL.md</code>, found by the audit before results were computed.</li>
 <li>Unit tests, including tests that prove the validator <i>can</i> fail (clash, capacity, out-of-range, missing slot) and that two different CP-SAT encodings reach the same optimum.</li>
 </ul>
 
@@ -364,7 +364,7 @@ Methods: three greedy constructions, simulated annealing, CP-SAT, and a LS-then-
 
 ## Implementation
 `src/examtt/`: generator, independent validator (shares no code with the solvers), incremental state, greedy, local search, CP-SAT models, statistics, analysis. `tests/`: validator-can-fail tests, solver-vs-validator agreement, two CP-SAT encodings reaching the same optimum.
-{aud['timetables_checked']} stored timetables re-validated; {aud['hard_violations']} hard violations; {aud['claimed_cost_mismatches']} claimed-vs-validated mismatches.
+{aud['timetables_checked']} stored timetables re-validated; {aud['hard_violations']} hard violations; {aud["claimed_cost_mismatches"]} claimed-vs-validated mismatches (solver claim above validated cost; Deviation 3).
 
 ## Results (held-out; excess over best-known in % of an instance scale, lower is better)
 {chr(10).join('- **' + r[0] + '** ' + r[3] + ' - ' + r[1] + ': ' + r[2] for r in [[x[0], re.sub('<[^>]+>', '', x[3]), re.sub('<[^>]+>', '', x[1]), re.sub('<[^>]+>', '', x[2])] for x in t_h])}
