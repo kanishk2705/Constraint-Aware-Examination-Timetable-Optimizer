@@ -21,3 +21,26 @@ def test_fit_threshold_picks_the_crossover():
     fit = an.fit_threshold(rows, metric="excess")
     assert fit["theta"] == 90  # CP-SAT up to 90 edges, LS above
     assert fit["mean_regret"] < min(fit["always_ls"], fit["always_cp"])
+
+
+def test_overestimated_claim_is_reported_not_fatal_but_underestimate_aborts(tmp_path):
+    import json, pytest
+    from examtt import analysis
+    from examtt.generator import generate
+    from examtt.instance import Instance
+    from examtt.greedy import greedy
+    import numpy as np
+    raw = generate("t", 5, 14, 0.25, 0.7, n_days=2)
+    d = tmp_path; (d / "t.json").write_text(json.dumps(raw))
+    inst = Instance(raw)
+    rng = np.random.default_rng(0)
+    st = greedy(inst, "ldf", rng, rule="min_penalty")
+    assert st is not None
+    a = [int(x) for x in st.assign]
+    true = analysis.validate(raw, a)["objective"]["total"]
+    def rec(claim):
+        return [{"name": "t", "sha256": inst.hash, "B": {"cpsat_cold": {"assign": a, "cost": claim}}, "A": {}}]
+    _, audit = analysis.validate_records(rec(true + 7), str(d))
+    assert audit["claimed_overestimates"] == 1 and audit["max_overestimate"] == 7
+    with pytest.raises(analysis.AnalysisError):
+        analysis.validate_records(rec(true - 1), str(d))

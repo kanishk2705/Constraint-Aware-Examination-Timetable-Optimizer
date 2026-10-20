@@ -94,3 +94,16 @@
 [93/108] eval_S_low_tight_0 47s  dsatur=306 ls=306 cp=168(OPTIMAL) hyb=168 | slots ff=9 ms=9 cp=8(OPTIMAL) lb=8
 [94/108] eval_S_low_tight_1 45s  dsatur=595 ls=595 cp=595(OPTIMAL) hyb=595 | slots ff=8 ms=8 cp=8(OPTIMAL) lb=8
 [95/108] eval_S_low_tight_2 47s  dsatur=None ls=395 cp=169(OPTIMAL) hyb=169 | slots ff=8 ms=8 cp=8(OPTIMAL) lb=8
+[96/108] eval_S_low_tight_3 46s  dsatur=None ls=114 cp=54(OPTIMAL) hyb=54 | slots ff=8 ms=8 cp=8(OPTIMAL) lb=8
+[97/108] eval_S_mid_loose_0 45s  dsatur=320 ls=192 cp=192(OPTIMAL) hyb=192 | slots ff=6 ms=6 cp=6(OPTIMAL) lb=6
+[98/108] eval_S_mid_loose_1 47s  dsatur=898 ls=762 cp=762(OPTIMAL) hyb=762 | slots ff=6 ms=6 cp=6(OPTIMAL) lb=6
+[99/108] eval_S_mid_loose_2 50s  dsatur=617 ls=554 cp=554(OPTIMAL) hyb=554 | slots ff=6 ms=6 cp=6(OPTIMAL) lb=6
+[100/108] eval_S_mid_loose_3 46s  dsatur=878 ls=854 cp=854(OPTIMAL) hyb=854 | slots ff=7 ms=7 cp=7(OPTIMAL) lb=6
+[101/108] eval_S_mid_medium_0 47s  dsatur=891 ls=891 cp=891(OPTIMAL) hyb=891 | slots ff=8 ms=8 cp=8(OPTIMAL) lb=7
+[102/108] eval_S_mid_medium_1 49s  dsatur=440 ls=369 cp=324(OPTIMAL) hyb=324 | slots ff=8 ms=8 cp=8(OPTIMAL) lb=7
+[103/108] eval_S_mid_medium_2 51s  dsatur=984 ls=568 cp=448(OPTIMAL) hyb=448 | slots ff=9 ms=8 cp=8(OPTIMAL) lb=7
+[104/108] eval_S_mid_medium_3 45s  dsatur=540 ls=276 cp=276(OPTIMAL) hyb=276 | slots ff=8 ms=8 cp=8(OPTIMAL) lb=7
+[105/108] eval_S_mid_tight_0 46s  dsatur=526 ls=497 cp=404(OPTIMAL) hyb=404 | slots ff=8 ms=8 cp=8(OPTIMAL) lb=8
+[106/108] eval_S_mid_tight_1 46s  dsatur=569 ls=569 cp=375(OPTIMAL) hyb=375 | slots ff=8 ms=8 cp=8(OPTIMAL) lb=8
+[107/108] eval_S_mid_tight_2 48s  dsatur=1554 ls=1204 cp=1142(OPTIMAL) hyb=1142 | slots ff=8 ms=8 cp=8(OPTIMAL) lb=8
+[108/108] eval_S_mid_tight_3 49s  dsatur=None ls=1670 cp=1225(OPTIMAL) hyb=1225 | slots ff=8 ms=8 cp=8(OPTIMAL) lb=8

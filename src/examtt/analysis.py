@@ -37,7 +37,9 @@ def load_raw_instance(data_dir, name):
 
 def validate_records(records, data_dir):
     """Return per-instance validated costs / slot counts and a validation audit."""
-    audit = {"timetables_checked": 0, "claimed_cost_mismatches": 0, "hard_violations": 0, "details": []}
+    audit = {"timetables_checked": 0, "claimed_cost_mismatches": 0, "claimed_overestimates": 0,
+             "max_overestimate": 0, "hard_violations": 0, "details": []}
+    fatal = []
     out = {}
     for r in records:
         raw = load_raw_instance(data_dir, r["name"])
@@ -61,6 +63,13 @@ def validate_records(records, data_dir):
                     if v.get("cost") is not None and v["cost"] != cost:
                         audit["claimed_cost_mismatches"] += 1
                         audit["details"].append(f"{r['name']} {m}: claimed {v['cost']} validated {cost}")
+                        if v["cost"] > cost:
+                            # Deviation 3 (PROTOCOL.md section 13): the solver's claim may exceed the true cost of a
+                            # hard-feasible timetable; the validator's cost is used and the discrepancy is reported.
+                            audit["claimed_overestimates"] += 1
+                            audit["max_overestimate"] = max(audit["max_overestimate"], int(v["cost"] - cost))
+                        else:
+                            fatal.append(audit["details"][-1])
             row["B"][m] = cost
         for m in A_METHODS:
             v = r["A"].get(m) or {}
@@ -77,10 +86,11 @@ def validate_records(records, data_dir):
                     if v.get("slots") is not None and v["slots"] != k:
                         audit["claimed_cost_mismatches"] += 1
                         audit["details"].append(f"{r['name']} {m}: claimed {v['slots']} slots, validated {k}")
+                        fatal.append(audit["details"][-1])
             row["A"][m] = k
         out[r["name"]] = row
-    if audit["claimed_cost_mismatches"]:
-        raise AnalysisError(f"claimed objective differs from the independent validator: {audit['details'][:5]}")
+    if fatal:
+        raise AnalysisError(f"claimed objective is below the independent validator's (or slot count differs): {fatal[:5]}")
     return out, audit
 
 
