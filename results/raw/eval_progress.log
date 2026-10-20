@@ -62,3 +62,4 @@
 [61/108] eval_M_mid_loose_0 80s  dsatur=409 ls=173 cp=173(FEASIBLE) hyb=173 | slots ff=12 ms=12 cp=12(OPTIMAL) lb=12
 [62/108] eval_M_mid_loose_1 80s  dsatur=264 ls=130 cp=130(FEASIBLE) hyb=130 | slots ff=12 ms=12 cp=12(OPTIMAL) lb=12
 [63/108] eval_M_mid_loose_2 80s  dsatur=327 ls=222 cp=222(FEASIBLE) hyb=208 | slots ff=12 ms=12 cp=12(OPTIMAL) lb=12
+[64/108] eval_M_mid_loose_3 80s  dsatur=355 ls=240 cp=228(FEASIBLE) hyb=227 | slots ff=12 ms=12 cp=12(OPTIMAL) lb=12
