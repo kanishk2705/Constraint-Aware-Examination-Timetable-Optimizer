@@ -1,1 +1,2 @@
 0 done, 108 to run, budget 20.0s, LS params {'t0': 2.0, 't1': 0.01, 'p_swap': 0.5}
+[1/108] eval_L_high_loose_0 100s  dsatur=2371 ls=1395 cp=2134(FEASIBLE) hyb=1441 | slots ff=22 ms=21 cp=21(FEASIBLE) lb=20
