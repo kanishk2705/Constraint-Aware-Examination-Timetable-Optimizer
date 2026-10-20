@@ -44,6 +44,9 @@ def validate_records(records, data_dir):
         if Instance(raw).hash != r["sha256"]:
             raise AnalysisError(f"{r['name']}: instance file does not match the instance that was run (hash mismatch)")
         row = {"B": {}, "A": {}}
+        # fixed per-instance normaliser: worst-case pair penalty if every shared-student pair were back-to-back
+        pair_total = sum(st["count"] * (len(set(st["exams"])) * (len(set(st["exams"])) - 1) // 2) for st in raw["students"])
+        row["scale"] = float(raw["penalty_by_distance"][1] * pair_total)
         for m in B_METHODS:
             v = r["B"].get(m)
             cost = NAN
@@ -90,12 +93,19 @@ def regrets(validated_row):
     return {m: (NAN if math.isnan(c) else regret_pct(c, best)) for m, c in costs.items()}, best
 
 
+def excess(validated_row, best):
+    """Excess over the best-known cost, in % of the instance's fixed scale (no division by a zero optimum)."""
+    sc = max(validated_row["scale"], 1.0)
+    return {m: (NAN if math.isnan(c) or math.isnan(best) else 100.0 * (c - best) / sc) for m, c in validated_row["B"].items()}
+
+
 def table(records, validated):
     """Flat per-instance table used by every statistic."""
     rows = []
     for r in records:
         v = validated[r["name"]]
         reg, best = regrets(v)
+        exc = excess(v, best)
         p = r["params"]
         cp = r["B"].get("cpsat_cold", {})
         rows.append({
@@ -103,7 +113,7 @@ def table(records, validated):
             "edges": r["features"]["edges"], "n": r["features"]["n"], "T": r["features"]["T"],
             "binary_vars": r["features"]["binary_vars"], "achieved_density": r["features"]["density"],
             "achieved_tightness": r["features"]["tightness"],
-            "cost": v["B"], "regret": reg, "best": best,
+            "cost": v["B"], "regret": reg, "excess": exc, "best": best, "scale": v["scale"],
             "cp_status": cp.get("status"), "cp_bound": cp.get("bound"),
             "hyb_status": r["B"].get("hybrid", {}).get("status"),
             "slots": v["A"], "A": r["A"], "raw": r,
@@ -115,8 +125,11 @@ def _sel(rows, **kw):
     return [r for r in rows if all(r[k] == v for k, v in kw.items())]
 
 
-def _reg(rows, m):
-    return np.array([r["regret"][m] for r in rows], dtype=float)
+METRIC = "excess"  # primary metric after Deviation 1 (PROTOCOL.md section 13); "regret" is the sensitivity analysis
+
+
+def _reg(rows, m, metric=None):
+    return np.array([r[metric or METRIC][m] for r in rows], dtype=float)
 
 
 def _feasible(rows, m):
@@ -147,36 +160,38 @@ def diff_rate_ci(a, b, n_boot=N_BOOT, seed=BOOT_SEED):
             "n_a": len(a), "n_b": len(b)}
 
 
-def fit_threshold(rows):
+def fit_threshold(rows, metric=None):
     """PROTOCOL 8.2: choose theta minimising mean regret of 'CP-SAT if edges <= theta else LS' on instances where both exist."""
-    ok = [r for r in rows if not math.isnan(r["regret"]["ls"]) and not math.isnan(r["regret"]["cpsat_cold"])]
+    metric = metric or METRIC
+    ok = [r for r in rows if not math.isnan(r[metric]["ls"]) and not math.isnan(r[metric]["cpsat_cold"])]
     cands = [-1] + sorted({r["edges"] for r in ok})
     best = None
     table_ = []
     for th in cands:
-        mean = float(np.mean([r["regret"]["cpsat_cold"] if r["edges"] <= th else r["regret"]["ls"] for r in ok])) if ok else NAN
+        mean = float(np.mean([r[metric]["cpsat_cold"] if r["edges"] <= th else r[metric]["ls"] for r in ok])) if ok else NAN
         table_.append({"theta": th, "mean_regret": mean})
         if best is None or mean < best[1] - 1e-12:
             best = (th, mean)
     return {"theta": best[0], "mean_regret": best[1], "n_instances": len(ok),
-            "always_ls": float(np.mean([r["regret"]["ls"] for r in ok])) if ok else None,
-            "always_cp": float(np.mean([r["regret"]["cpsat_cold"] for r in ok])) if ok else None,
+            "metric": metric,
+            "always_ls": float(np.mean([r[metric]["ls"] for r in ok])) if ok else None,
+            "always_cp": float(np.mean([r[metric]["cpsat_cold"] for r in ok])) if ok else None,
             "candidates": table_}
 
 
-def policy_regret(rows, theta):
+def policy_regret(rows, theta, metric=None):
     out = []
     for r in rows:
         m = "cpsat_cold" if r["edges"] <= theta else "ls"
-        out.append(r["regret"][m])
+        out.append(r[metric or METRIC][m])
     return np.array(out, dtype=float)
 
 
 def method_summary(rows):
     s = {}
     for m in B_METHODS:
-        reg = _reg(rows, m)
-        s[m] = {"feasible": feasible_rate(rows, m), "regret": bootstrap_mean_ci(reg)}
+        s[m] = {"feasible": feasible_rate(rows, m), "excess": bootstrap_mean_ci(_reg(rows, m, "excess")),
+                "regret": bootstrap_mean_ci(_reg(rows, m, "regret"))}
     return s
 
 
@@ -191,9 +206,11 @@ def cell_table(rows):
                 cell = {"tier": t, "density": d, "tight": g, "n": len(sub),
                         "proven_optimal": sum(1 for r in sub if r["cp_status"] == "OPTIMAL")}
                 for m in B_METHODS:
-                    reg = _reg(sub, m)
+                    reg = _reg(sub, m, "regret")
+                    exc = _reg(sub, m, "excess")
                     ok = reg[~np.isnan(reg)]
-                    cell[m] = {"feasible": int(len(ok)), "mean_regret": float(ok.mean()) if len(ok) else None}
+                    cell[m] = {"feasible": int(len(ok)), "mean_regret": float(ok.mean()) if len(ok) else None,
+                               "mean_excess": float(exc[~np.isnan(exc)].mean()) if len(ok) else None}
                 cells.append(cell)
     return cells
 
@@ -238,7 +255,7 @@ def study_a(rows):
     return res
 
 
-def hypotheses(rows, theta):
+def hypotheses(rows, theta, metric=None):
     h = {}
     # H1 proof frontier
     pr = {t: proven_rate(_sel(rows, tier=t)) for t in TIERS}
@@ -248,7 +265,7 @@ def hypotheses(rows, theta):
     d = {}
     for t in TIERS:
         sub = _sel(rows, tier=t)
-        d[t] = paired_diff_ci(_reg(sub, "ls"), _reg(sub, "cpsat_cold"))
+        d[t] = paired_diff_ci(_reg(sub, "ls", metric), _reg(sub, "cpsat_cold", metric))
         d[t]["wtl_ls_vs_cp"] = win_tie_loss([r["cost"]["ls"] for r in sub], [r["cost"]["cpsat_cold"] for r in sub])
     h["H2"] = {"D_ls_minus_cp": d,
                "H2a_supported": bool(d["M"]["lo"] is not None and d["M"]["lo"] > 0),
@@ -264,12 +281,12 @@ def hypotheses(rows, theta):
                "supported": bool(dr["hi"] is not None and dr["hi"] < 0 and feasible_rate(tight, "ls")["rate"] >= 0.9
                                  and feasible_rate(tight, "cpsat_cold")["rate"] >= 0.9)}
     # H4 warm start
-    h4 = paired_diff_ci(_reg(ml, "hybrid"), _reg(ml, "cpsat_cold"))
+    h4 = paired_diff_ci(_reg(ml, "hybrid", metric), _reg(ml, "cpsat_cold", metric))
     h["H4"] = {"hybrid_minus_cold": h4, "wtl_hybrid_vs_cold": win_tie_loss([r["cost"]["hybrid"] for r in ml], [r["cost"]["cpsat_cold"] for r in ml]),
                "supported": bool(h4["hi"] is not None and h4["hi"] < 0)}
     # H5 decision rule
-    pol = policy_regret(rows, theta)
-    ls_r, cp_r = _reg(rows, "ls"), _reg(rows, "cpsat_cold")
+    pol = policy_regret(rows, theta, metric)
+    ls_r, cp_r = _reg(rows, "ls", metric), _reg(rows, "cpsat_cold", metric)
     vs_ls = paired_diff_ci(pol, ls_r)
     vs_cp = paired_diff_ci(pol, cp_r)
     h["H5"] = {"theta": theta, "rule_mean_regret": bootstrap_mean_ci(pol), "always_ls_mean_regret": bootstrap_mean_ci(ls_r),
@@ -282,7 +299,8 @@ def run_all(records, data_dir, theta):
     validated, audit = validate_records(records, data_dir)
     rows = table(records, validated)
     sa = study_a(rows)
-    h = hypotheses(rows, theta)
+    h = hypotheses(rows, theta, "excess")
+    h_sens = hypotheses(rows, theta, "regret")  # pre-registered percentage regret, reported as a sensitivity analysis
     a = sa["per_tier"]["all"]
     h["H6"] = {"dsatur_matches_cpsat": a["dsatur_matches_cpsat"], "exceptions": sa["exceptions"],
                "supported": bool(a["dsatur_matches_cpsat"]["rate"] is not None and a["dsatur_matches_cpsat"]["rate"] >= 0.90)}
@@ -295,6 +313,7 @@ def run_all(records, data_dir, theta):
            "proven_by_density": {d: proven_rate(_sel(rows, density=d)) for d in DENS},
            "proven_by_tightness": {g: proven_rate(_sel(rows, tight=g)) for g in TIGHT},
            "time_to_best_cpsat": time_to_best(rows), "cells": cell_table(rows), "study_a": sa, "hypotheses": h,
+           "hypotheses_sensitivity_regret": {k: h_sens[k] for k in ("H2", "H4", "H5")}, "primary_metric": "excess",
            "achieved": {"density_mean": float(np.mean([r["achieved_density"] for r in rows])),
                         "tightness_by_level": {g: float(np.mean([r["achieved_tightness"] for r in _sel(rows, tight=g)])) for g in TIGHT}}}
     return out, rows

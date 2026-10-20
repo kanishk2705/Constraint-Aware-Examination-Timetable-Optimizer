@@ -123,4 +123,8 @@ Hardware: the sandbox has about 2 CPU cores; two processes never compete with ea
 
 ## 13. Deviations (appended after the freeze only)
 
-*(none yet)*
+**Deviation 1 — primary metric (2026-10-20, after the freeze, before any Study-B tuning-set run and before any eval run).**
+Percentage regret with the floor `max(best, 1)` (section 7) is unstable when the best-known cost is 0. In the SA tuning runs, 6 of the 36 tuning instances of tiers M and L (all large, low density) had a best cost of exactly 0, so a method that misses it by a few penalty points would get a regret of thousands of percent and dominate every mean. This was found on tuning data only. From now on the **primary metric is the excess**
+`100 * (cost_m - best_i) / scale_i`, where `scale_i = 5 * sum over cohorts of count * C(k,2)` (the penalty if every pair of exams a student shares were back-to-back; a fixed property of the instance, independent of any method). H2, H4 and H5 and the threshold fit (8.2) are decided on the excess. The pre-registered percentage regret is still computed and published next to it as a **sensitivity analysis**; where the two disagree, that is reported. No hypothesis, threshold or interval rule changed.
+
+**Deviation 2 — tuning score with a zero minimum (2026-10-20).** Section 8.1 divides by the per-instance minimum cost, which is undefined at 0. The tuning script used `max(min, 1)`. Re-ranking the grid without the 6 zero-minimum instances gives the same winner (`t0 = 2.0, t1 = 0.01, p_swap = 0.5`), so the selection is unaffected.
