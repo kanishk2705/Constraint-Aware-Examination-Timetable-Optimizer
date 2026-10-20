@@ -1,2 +1,18 @@
 0 done, 108 to run, budget 20.0s, LS params {'t0': 2.0, 't1': 0.01, 'p_swap': 0.5}
 [1/108] eval_L_high_loose_0 100s  dsatur=2371 ls=1395 cp=2134(FEASIBLE) hyb=1441 | slots ff=22 ms=21 cp=21(FEASIBLE) lb=20
+[2/108] eval_L_high_loose_1 86s  dsatur=2835 ls=1723 cp=4627(FEASIBLE) hyb=2043 | slots ff=21 ms=21 cp=20(OPTIMAL) lb=20
+[3/108] eval_L_high_loose_2 81s  dsatur=2379 ls=1435 cp=2469(FEASIBLE) hyb=1561 | slots ff=20 ms=20 cp=20(OPTIMAL) lb=20
+[4/108] eval_L_high_loose_3 84s  dsatur=2873 ls=1443 cp=3348(FEASIBLE) hyb=1707 | slots ff=21 ms=21 cp=20(OPTIMAL) lb=20
+[5/108] eval_L_high_medium_0 100s  dsatur=4280 ls=2758 cp=5540(FEASIBLE) hyb=3687 | slots ff=26 ms=26 cp=25(FEASIBLE) lb=24
+[6/108] eval_L_high_medium_1 100s  dsatur=3441 ls=2460 cp=5132(FEASIBLE) hyb=2836 | slots ff=25 ms=25 cp=25(FEASIBLE) lb=24
+[7/108] eval_L_high_medium_2 100s  dsatur=4270 ls=2182 cp=5043(FEASIBLE) hyb=2573 | slots ff=26 ms=25 cp=25(FEASIBLE) lb=24
+[8/108] eval_L_high_medium_3 100s  dsatur=3539 ls=1826 cp=3482(FEASIBLE) hyb=2279 | slots ff=25 ms=25 cp=25(FEASIBLE) lb=24
+[9/108] eval_L_high_tight_0 83s  dsatur=None ls=5333 cp=None(UNKNOWN) hyb=5338 | slots ff=29 ms=29 cp=28(OPTIMAL) lb=28
+[10/108] eval_L_high_tight_1 83s  dsatur=None ls=5376 cp=None(UNKNOWN) hyb=4768 | slots ff=29 ms=29 cp=28(OPTIMAL) lb=28
+[11/108] eval_L_high_tight_2 81s  dsatur=6838 ls=4519 cp=None(UNKNOWN) hyb=4555 | slots ff=28 ms=28 cp=28(OPTIMAL) lb=28
+[12/108] eval_L_high_tight_3 81s  dsatur=None ls=4722 cp=None(UNKNOWN) hyb=5284 | slots ff=28 ms=28 cp=28(OPTIMAL) lb=28
+[13/108] eval_L_low_loose_0 47s  dsatur=0 ls=0 cp=0(OPTIMAL) hyb=0 | slots ff=21 ms=20 cp=20(OPTIMAL) lb=20
+[14/108] eval_L_low_loose_1 47s  dsatur=0 ls=0 cp=0(OPTIMAL) hyb=0 | slots ff=20 ms=20 cp=20(OPTIMAL) lb=20
+[15/108] eval_L_low_loose_2 47s  dsatur=0 ls=0 cp=0(OPTIMAL) hyb=0 | slots ff=20 ms=20 cp=20(OPTIMAL) lb=20
+[16/108] eval_L_low_loose_3 47s  dsatur=0 ls=0 cp=0(OPTIMAL) hyb=0 | slots ff=20 ms=20 cp=20(OPTIMAL) lb=20
+[17/108] eval_L_low_medium_0 47s  dsatur=0 ls=0 cp=0(OPTIMAL) hyb=0 | slots ff=24 ms=24 cp=24(OPTIMAL) lb=24
