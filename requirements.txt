@@ -1,0 +1,6 @@
+ortools>=9.10
+numpy
+scipy
+pandas
+matplotlib
+pytest
