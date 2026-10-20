@@ -1,0 +1,155 @@
+{
+ "theta": 505,
+ "mean_regret": 0.09561765741579499,
+ "n_instances": 51,
+ "metric": "excess",
+ "always_ls": 0.764220577690725,
+ "always_cp": 0.20829993269275185,
+ "candidates": [
+  {
+   "theta": -1,
+   "mean_regret": 0.764220577690725
+  },
+  {
+   "theta": 10,
+   "mean_regret": 0.764220577690725
+  },
+  {
+   "theta": 11,
+   "mean_regret": 0.764220577690725
+  },
+  {
+   "theta": 12,
+   "mean_regret": 0.764220577690725
+  },
+  {
+   "theta": 15,
+   "mean_regret": 0.764220577690725
+  },
+  {
+   "theta": 17,
+   "mean_regret": 0.764220577690725
+  },
+  {
+   "theta": 23,
+   "mean_regret": 0.764220577690725
+  },
+  {
+   "theta": 24,
+   "mean_regret": 0.764220577690725
+  },
+  {
+   "theta": 25,
+   "mean_regret": 0.561705228116552
+  },
+  {
+   "theta": 26,
+   "mean_regret": 0.52370553211412
+  },
+  {
+   "theta": 28,
+   "mean_regret": 0.52370553211412
+  },
+  {
+   "theta": 41,
+   "mean_regret": 0.52370553211412
+  },
+  {
+   "theta": 42,
+   "mean_regret": 0.4885204897309264
+  },
+  {
+   "theta": 44,
+   "mean_regret": 0.2326093017263128
+  },
+  {
+   "theta": 50,
+   "mean_regret": 0.21908665128682667
+  },
+  {
+   "theta": 51,
+   "mean_regret": 0.21908665128682667
+  },
+  {
+   "theta": 53,
+   "mean_regret": 0.19794093809959099
+  },
+  {
+   "theta": 124,
+   "mean_regret": 0.1966293766857278
+  },
+  {
+   "theta": 125,
+   "mean_regret": 0.21219783582904178
+  },
+  {
+   "theta": 126,
+   "mean_regret": 0.20955882598553505
+  },
+  {
+   "theta": 128,
+   "mean_regret": 0.14493034665030818
+  },
+  {
+   "theta": 202,
+   "mean_regret": 0.14493034665030818
+  },
+  {
+   "theta": 204,
+   "mean_regret": 0.14493034665030818
+  },
+  {
+   "theta": 207,
+   "mean_regret": 0.14493034665030818
+  },
+  {
+   "theta": 210,
+   "mean_regret": 0.14493034665030818
+  },
+  {
+   "theta": 224,
+   "mean_regret": 0.13683908638944184
+  },
+  {
+   "theta": 226,
+   "mean_regret": 0.13849088685194597
+  },
+  {
+   "theta": 227,
+   "mean_regret": 0.09810560522470038
+  },
+  {
+   "theta": 504,
+   "mean_regret": 0.09623264465480978
+  },
+  {
+   "theta": 505,
+   "mean_regret": 0.09561765741579499
+  },
+  {
+   "theta": 506,
+   "mean_regret": 0.0981880647526105
+  },
+  {
+   "theta": 507,
+   "mean_regret": 0.10120726063070269
+  },
+  {
+   "theta": 908,
+   "mean_regret": 0.16272262964645315
+  },
+  {
+   "theta": 909,
+   "mean_regret": 0.17848735301740568
+  },
+  {
+   "theta": 911,
+   "mean_regret": 0.20829993269275185
+  }
+ ],
+ "audit": {
+  "timetables_checked": 274,
+  "claimed_cost_mismatches": 0,
+  "hard_violations": 0
+ }
+}
